@@ -1,0 +1,33 @@
+# Environt variables
+.env
+.env.*
+
+# Keep example of env file
+!.env.example
+
+# Python virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local data
+data/incidents/*
+!data/incidents/.gitkeep
