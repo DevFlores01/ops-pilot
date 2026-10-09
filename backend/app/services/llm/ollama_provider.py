@@ -2,6 +2,7 @@ import httpx
 
 from app.core.config import settings
 from app.services.llm.base import LLMProvider
+from app.models.incident import IncidentAnalysis
 
 SYSTEM_PROMPT = """
 You are OpsPilot, a production operations assistant.
@@ -18,6 +19,17 @@ For troubleshooting questions:
 - Do not claim to have checked logs, metrics, servers, databases,
   Kubernetes, or infrastructure unless tool results were provided.
 - If evidence is insufficient, clearly state what evidence is needed.
+"""
+
+SYSTEM_PROMPT_ANALYZE_INCIDENT ="""
+You are OpsPilot, a production incident analyst.
+Analyze only the information supplied by the user.
+Do not invent logs, metrics, or infrastructure checks.
+If the root cause is uncertain, say so.
+Return JSON matching the required schema.
+Recommend read-only investigation first.
+Set requires_human_approval to true if any
+recommended action would modify infrastructure.
 """
 
 class OllamaProvider(LLMProvider):
@@ -47,6 +59,7 @@ class OllamaProvider(LLMProvider):
             "stream": False,
             "options": {
                 "num_predict": 500,
+                "temperature": 0.2,
             },
         }
         
@@ -68,3 +81,41 @@ class OllamaProvider(LLMProvider):
             
         content = data["message"]["content"]
         return self.clean_response(content)
+    
+    async def analyze_incident(
+        self,
+        user_message: str
+    ) -> IncidentAnalysis:
+        
+        payload = {
+            "model": settings.ollama_model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": SYSTEM_PROMPT_ANALYZE_INCIDENT,
+                },
+                {
+                    "role":"user",
+                    "content": user_message
+                }
+            ],
+            "format": IncidentAnalysis.model_json_schema(),
+            "stream": False,
+            "options": {
+                "temperature": 0,
+                "num_ctx": 2048,
+                "num_predict": 500
+            }
+        }
+        
+        async with httpx.AsyncClient(timeout=180.0) as client:
+            response = await client.post(
+                f"{settings.ollama_base_url}/api/chat",
+                json=payload
+            )
+            response.raise_for_status()
+            data = response.json()
+            
+        content = data["message"]["content"]
+        
+        return IncidentAnalysis.model_validate_json(content)

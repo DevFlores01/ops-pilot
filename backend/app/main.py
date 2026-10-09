@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.core.config import settings
 from app.api.routes.chat import router as chat_router
+from app.api.routes.analysis import router as analysis_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -10,6 +11,7 @@ app = FastAPI(
 )
 
 app.include_router(chat_router)
+app.include_router(analysis_router)
 
 @app.get("/")
 async def root():
