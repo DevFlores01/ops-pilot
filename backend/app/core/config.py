@@ -30,4 +30,14 @@ class Settings(BaseSettings):
     aws_secret_access_key: str = "test"
     s3_bucket: str = "opspilot-runbooks"
     
+    embedding_model: str = "nomic-embed-text"
+    
+    postgres_host: str = "127.0.0.1"
+    postgres_port: str = 15432
+    postgres_db: str = "opspilot"
+    postgres_user: str = "opspilot"
+    postgres_password: str
+    
+    rag_min_similarity: float = 0.55
+    
 settings = Settings()
