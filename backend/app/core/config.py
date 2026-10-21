@@ -4,40 +4,44 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parents[3]
 ENV_FILE = BASE_DIR / ".env"
 
+
 class Settings(BaseSettings):
     app_name: str = "OpsPilot"
     app_version: str = "0.2.0"
     environment: str = "development"
     debug: bool = True
-    
+
     llm_provider: str = "ollama"
-    
+
     openai_api_key: str | None = None
     openai_model: str | None = None
-    
+
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:3b"
 
     model_config = SettingsConfigDict(
-        env_file = ENV_FILE,
-        env_file_encoding = "utf-8",
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
         extra="ignore",
     )
-    
+
     aws_endpoint_url: str = "http://localhost:4566"
     aws_default_region: str = "us-east-1"
     aws_access_key_id: str = "test"
     aws_secret_access_key: str = "test"
     s3_bucket: str = "opspilot-runbooks"
-    
+
     embedding_model: str = "nomic-embed-text"
-    
+
     postgres_host: str = "127.0.0.1"
     postgres_port: str = 15432
     postgres_db: str = "opspilot"
     postgres_user: str = "opspilot"
     postgres_password: str
-    
+
     rag_min_similarity: float = 0.55
-    
+
+    opspilot_api_key: str
+
+
 settings = Settings()
