@@ -5,6 +5,8 @@ from app.core.config import settings
 
 client = TestClient(app)
 
+AUTH_HEADERS = {"X_API_KEY": settings.opspilot_api_key}
+
 
 def test_missing_api_key_rejected():
     response = client.get("/api/v1/tools/runbooks")
@@ -14,7 +16,7 @@ def test_missing_api_key_rejected():
 def test_invalid_api_key_rejected():
     response = client.get(
         "/api/v1/tools/runbooks",
-        headers={"X-API-Key": "Invalid-key"},
+        headers={"X_API_Key": "Invalid-key"},
     )
     assert response.status_code == 401
 

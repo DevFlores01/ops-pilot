@@ -4,13 +4,17 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.services.mcp_client_service import MCPClientService
+from app.core.config import settings
 
 client = TestClient(app)
+
+AUTH_HEADERS = {"X_API_KEY": settings.opspilot_api_key}
 
 
 def test_search_rejects_invalid_top_k():
     response = client.post(
         "/api/v1/tools/search",
+        headers=AUTH_HEADERS,
         json={"query": "kubernetes errors", "top_k": 100},
     )
 
@@ -37,6 +41,7 @@ def test_Search_calls_allowlisted_mcp_tool(monkeypatch):
 
     response = client.post(
         "/api/v1/tools/search",
+        headers=AUTH_HEADERS,
         json={
             "query": "Kubernetes CrashLoopBackOff",
             "top_k": 3,
