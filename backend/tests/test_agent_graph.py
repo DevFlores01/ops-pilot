@@ -6,6 +6,8 @@ from app.agents.decision_service import ToolDecision
 from app.agents.graph import agent_graph
 from app.agents import graph as graph_module
 from app.agents.response_service import GroundedAnswer
+from app.agents.structured_incident_service import StructuredIncidentService
+from app.models.agent_response import StructuredIncident
 
 
 @pytest.mark.asyncio
@@ -41,6 +43,22 @@ async def test_agent_rejects_disallowed_tool(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_agent_searches_approved_runbooks(monkeypatch):
+
+    question = "Why is my kubernetes pod crashing?"
+
+    evidence = [
+        {
+            "document_key": "runbooks/kubernetes-pod-runbook.md",
+            "chunk_index": 0,
+            "content": (
+                "Kubernetes CrashLoopBackOff investigation: "
+                "Inspect pod events, container logs, "
+                "resource limits, and recent deployments."
+            ),
+            "similarity": 0.7862,
+        }
+    ]
+
     mock_decide = AsyncMock(
         return_value=ToolDecision(
             tool="search_runbooks",
@@ -48,22 +66,7 @@ async def test_agent_searches_approved_runbooks(monkeypatch):
         )
     )
 
-    mock_call = AsyncMock(
-        return_value={
-            "result": [
-                {
-                    "document_key": "runbooks/kubernetes-pod-runbook.md",
-                    "chunk_index": 0,
-                    "content": (
-                        "Kubernetes CrashLoopBackOff investigation: "
-                        "Inspect pod events, container logs, "
-                        "resource limits, and recent deployments."
-                    ),
-                    "similarity": 0.7862,
-                }
-            ]
-        }
-    )
+    mock_call = AsyncMock(return_value={"result": evidence})
 
     mock_generate = AsyncMock(
         return_value=GroundedAnswer(
@@ -71,6 +74,20 @@ async def test_agent_searches_approved_runbooks(monkeypatch):
                 "Inspect Kubernetes pod events, " "container logs, and resource limits."
             ),
             sources=["runbooks/kubernetes-pod-runbook.md"],
+        )
+    )
+
+    mock_structured = AsyncMock(
+        return_value=StructuredIncident(
+            summary="Kubernetes investigation",
+            severity="unknown",
+            probable_cause="Not confirmed",
+            evidence=[
+                "Inspect pod events, container logs, "
+                "resource limits, and recent deployments."
+            ],
+            recommended_actions=["Inspect pod events"],
+            requires_human_approval=False,
         )
     )
 
@@ -92,12 +109,21 @@ async def test_agent_searches_approved_runbooks(monkeypatch):
         mock_generate,
     )
 
-    question = "Why is my kubernetes crashing?"
+    monkeypatch.setattr(
+        StructuredIncidentService,
+        "generate",
+        mock_structured,
+    )
 
     result = await agent_graph.ainvoke({"question": question})
 
     assert result["status"] == "success"
     assert "Kubernetes" in result["answer"]
+
+    assert result["analysis_status"] == "success"
+    assert result["analysis"] is not None
+    assert result["analysis"]["severity"] == "unknown"
+    assert result["analysis"]["summary"] == "Kubernetes investigation"
 
     mock_call.assert_awaited_once_with(
         "search_runbooks",
@@ -105,6 +131,14 @@ async def test_agent_searches_approved_runbooks(monkeypatch):
             "query": question,
             "top_k": 3,
         },
-    ),
+    )
 
-    mock_generate.assert_awaited_once
+    mock_generate.assert_awaited_once_with(
+        question=question,
+        evidence=evidence,
+    )
+
+    mock_structured.assert_awaited_once_with(
+        question=question,
+        evidence=evidence,
+    )

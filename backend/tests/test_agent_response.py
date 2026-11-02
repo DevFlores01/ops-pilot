@@ -46,6 +46,7 @@ async def test_relevant_evidence_generates_answer(monkeypatch):
                 "result": [
                     {
                         "document_key": "runbooks/kubernetes-pod-runbook.md",
+                        "chunk_index": 0,
                         "content": "Inspect pod events and logs.",
                         "similarity": 0.7862,
                     }
