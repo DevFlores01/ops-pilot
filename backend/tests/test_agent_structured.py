@@ -4,7 +4,7 @@ import pytest
 
 from app.agents.graph import structured_analysis_node
 from app.agents.structured_incident_service import StructuredIncidentService
-from app.models.agent_response import StructuredIncident, SourceReference
+from app.models.agent_response import StructuredIncident
 
 EVIDENCE = {
     "document_key": "runbooks/kubernetes-pod-runbook.md",
@@ -33,9 +33,11 @@ async def test_structured_analysis_success(monkeypatch):
         mock_generate,
     )
 
+    question = "Why is Kubernetes crashing?"
+
     result = await structured_analysis_node(
         {
-            "question": "Why is Kubernetes crashing?",
+            "question": question,
             "selected_tool": "search_runbooks",
             "tool_result": {"result": [EVIDENCE]},
             "status": "success",
@@ -45,14 +47,22 @@ async def test_structured_analysis_success(monkeypatch):
     assert result["analysis_status"] == "success"
     assert result["analysis"] is not None
     assert result["analysis"]["severity"] == "unknown"
+    assert result["analysis"]["summary"] == ("Kubernetes pod is restarting.")
 
     assert len(result["sources"]) == 1
-    assert isinstance(result["sources"][0], SourceReference)
+    assert isinstance(result["sources"][0], dict)
 
-    assert result["sources"][0].chunk_index == 0
-    assert result["sources"][0].document_key == ("runbooks/kubernetes-pod-runbook.md")
+    assert result["sources"][0]["document_key"] == (
+        "runbooks/kubernetes-pod-runbook.md"
+    )
 
-    mock_generate.assert_awaited_once()
+    assert result["sources"][0]["chunk_index"] == 0
+    assert result["sources"][0]["similarity"] == 0.7862
+
+    mock_generate.assert_awaited_once_with(
+        question=question,
+        evidence=[EVIDENCE],
+    )
 
 
 @pytest.mark.asyncio

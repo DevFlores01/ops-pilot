@@ -8,8 +8,13 @@ class AgentState(TypedDict, total=False):
     selected_tool: str
     tool_arguments: dict[str, Any]
     tool_result: Any
+
     answer: str
     status: str
-    analysis: dict | None
+
+    analysis: dict[str, Any] | None
     analysis_status: str
-    sources: list[SourceReference]
+
+    sources: list[dict[str, Any]]
+
+    action_recommendations: list[dict]

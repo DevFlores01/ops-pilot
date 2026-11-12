@@ -22,7 +22,6 @@ async def main():
                 json.dumps(
                     result,
                     indent=2,
-                    default=str,
                 )
             )
 

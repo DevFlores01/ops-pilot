@@ -12,6 +12,9 @@ from app.agents.evidence_validator import (
     EvidenceValidationError,
     validate_incident_evidence,
 )
+from app.agents.recommendation_policy import build_recommendations
+from app.agents.report_policy import finalize_runbook_report
+from app.agents.approval_policy import evaluate_action
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +208,7 @@ async def generate_answer_node(state: AgentState) -> dict:
 
     return {
         "answer": generated.answer,
-        "sources": sources,
+        "sources": [source.model_dump() for source in sources],
         "status": "success",
     }
 
@@ -351,16 +354,42 @@ async def structured_analysis_node(
 
         # print("GENERATED INCIDENT EVIDENCE:", incident.evidence)
 
-        # Validate AI generated evidence against the actual retrieved runbook content.
+        # Validate generated evidence against retrieved runbooks.
         validated_incident = validate_incident_evidence(
             incident,
             evidence,
         )
 
+        recommendations = build_recommendations(evidence)
+
+        safe_recommendations = []
+
+        for item in recommendations:
+            decision = evaluate_action(item.action_id)
+
+            if (
+                item.policy_permitted
+                and decision.permitted
+                and not item.requires_human_approval
+                and not decision.requires_human_approval
+                and item.execution_status == "not_executed"
+            ):
+                safe_recommendations.append(item)
+
+        finalized = finalize_runbook_report(
+            question=state["question"],
+            incident=validated_incident,
+            recommendations=safe_recommendations,
+        )
+
         return {
-            "analysis": validated_incident.model_dump(),
+            "answer": finalized["answer"],
+            "analysis": finalized["analysis"],
             "analysis_status": "success",
-            "sources": sources,
+            "sources": [source.model_dump() for source in sources],
+            "action_recommendations": [
+                item.model_dump() for item in safe_recommendations
+            ],
         }
 
     except EvidenceValidationError:

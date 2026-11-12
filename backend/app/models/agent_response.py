@@ -25,3 +25,16 @@ class StructuredIncident(BaseModel):
     evidence: list[str] = Field(default_factory=list)
     recommended_actions: list[str] = Field(default_factory=list)
     requires_human_approval: bool = False
+
+
+class ActionRecommendation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    action_id: str
+    description: str
+    source: SourceReference
+
+    policy_permitted: bool
+    requires_human_approval: bool
+
+    execution_status: Literal["not_executed"] = "not_executed"
